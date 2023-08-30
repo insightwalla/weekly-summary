@@ -140,7 +140,8 @@ def process_data(df):
             values = data.values.tolist()[0]
             values_numeric = [x for x in values if str(x) != 'nan' and x != 'Off' and x != 'Absence']
             sum_hours = sum(values_numeric)
-            message = f"**({i}) {name} - Total paid hours: {round(sum_hours, 2)}**"
+            # round to 2 decimals
+            message = f"**({i}) {name} - Total paid hours: {round(sum_hours,2)}**"
             if is_absence:
                 message = message + f" (FOUND **ABSENCE** and **PAID HOURS** on: {day_})"
             with empty_space.expander(message):
@@ -181,7 +182,9 @@ def process_data(df):
                         difference_start_finish = difference_start_finish - 1
                     elif difference_start_finish > 14:
                         difference_start_finish = difference_start_finish - 3
-                    data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_} ({round(difference_start_finish,2)} hrs)'
+
+                    # as a markdown
+                    data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}\n({round(difference_start_finish, 2)} hrs)'
 
                     # add department columns and replace add the name to the beginning of the index
                 data = data.reset_index()
@@ -189,6 +192,8 @@ def process_data(df):
                 data['Name'] = data['Department'].apply(lambda x: f'{name} - {x}')
                 data = data.set_index('Name')
                 # add to the final dataframe
+                # add total column using sum_hours
+                data['Total'] = sum_hours
                 final_df = pd.concat([final_df, data])
                 st.dataframe(data, use_container_width=True)
 
@@ -268,11 +273,11 @@ def process_data(df):
                 total_hours.append(sum(values_numeric))
 
             totals_ = sum(total_hours)
-            message = f"**({i}) {name} - Total paid hours: {round(totals_, 2)}**"
+            # round to 2 decimals
+            message = f"**({i}) {name} - Total paid hours: {round(totals_,2)}**"
             if is_absence:
                 message = message + f" (FOUND **ABSENCE** and **PAID HOURS** on: {day_})"
             with empty_space.expander(message):
-
                 for dep in departments_attributions:
                     shift_data_ = shift_data[shift_data['Shift type'] == dep]
                     # working on adding shift inside the day column if not Absence
@@ -308,21 +313,28 @@ def process_data(df):
                         elif difference_start_finish > 10:
                             difference_start_finish = difference_start_finish - 1
 
-                        all_data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_} ({round(difference_start_finish,2)} hrs)'
-
+                        all_data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}\n({round(difference_start_finish, 2)} hrs)'
+                        
                 # add department columns and replace add the name to the beginning of the index
                 all_data = all_data.reset_index()
                 all_data = all_data.rename(columns = {'index': 'Department'})
                 all_data['Name'] = all_data['Department'].apply(lambda x: f'{name} - {x}')
                 all_data = all_data.set_index('Name')
+                all_data['Total'] = total_hours if len(total_hours) > 1 else total_hours[0]
                 # add to the final dataframe
                 final_df = pd.concat([final_df, all_data])
-                st.dataframe(all_data)#, use_container_width=True)
+                # add total column using sum_hours
+                st.dataframe(all_data, use_container_width=True)
 
         #st.stop()
     # show the data
-    
-    final_df = final_df[days_of_week]
+    # make total column
+    # get type of total column
+    total_column_type = final_df['Total'].dtype
+    # round to 2 decimals and transform it to string
+    # transform it to string
+    final_df['Total'] = final_df['Total'].apply(lambda x: str(round(x, 2)))
+    final_df = final_df[['Total'] + days_of_week]
     # highlight off days in red
     def highlight_off(s):
         is_off = s == 'Off'
@@ -335,6 +347,8 @@ def process_data(df):
     
     final_df = final_df.style.apply(highlight_off)
     final_df = final_df.apply(highlight_absence)
+    # set size of the text inside the table
+    final_df = final_df.set_properties(**{'font-size': '8pt'})
     final_empty_space.dataframe(final_df, use_container_width=True)
 
 if __name__ == '__main__':
