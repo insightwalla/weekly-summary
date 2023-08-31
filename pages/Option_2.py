@@ -32,15 +32,16 @@ boh_type = [
     'BOH - Demi Chef de Partie',
     'BOH - Senior Chef de Partie',
     'BOH - Chef de Partie',
+    'Management - BOH - Junior Sous Chef',
+    'Management - BOH - Sous Chef',
+    'Management - BOH - Head Chef',
+    'BOH'
 ]
 management_type = [
     'Management - FOH - General Manager',
     'Management - FOH - Assistant General Manager',
     'Management - FOH',
     'Management - FOH - Supervisor',
-    'Management - BOH - Junior Sous Chef',
-    'Management - BOH - Sous Chef',
-    'Management - BOH - Head Chef',
 ]
 dict_map = {
     'Bartenders': bartenders_type,
@@ -184,7 +185,7 @@ def process_data(df):
                         difference_start_finish = difference_start_finish - 3
 
                     # as a markdown
-                    data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}  \n  ({round(difference_start_finish, 2)} hrs)'
+                    data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}\n({round(difference_start_finish, 2)} hrs)'
 
                     # add department columns and replace add the name to the beginning of the index
                 data = data.reset_index()
@@ -313,7 +314,7 @@ def process_data(df):
                         elif difference_start_finish > 10:
                             difference_start_finish = difference_start_finish - 1
 
-                        all_data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}  \n  ({round(difference_start_finish, 2)} hrs)'
+                        all_data.loc[f'{dep}', f'{day_}'] = f'{start_} - {finish_}\n({round(difference_start_finish, 2)} hrs)'
                         
                 # add department columns and replace add the name to the beginning of the index
                 all_data = all_data.reset_index()
@@ -334,8 +335,9 @@ def process_data(df):
     # round to 2 decimals and transform it to string
     # transform it to string
     final_df['Total'] = final_df['Total'].apply(lambda x: str(round(x, 2)))
-    st.write(total_column_type)
     final_df = final_df[['Total'] + days_of_week]
+    final_df = final_df[~final_df.index.str.contains('BOH')]
+
     # highlight off days in red
     def highlight_off(s):
         is_off = s == 'Off'
@@ -349,8 +351,9 @@ def process_data(df):
     final_df = final_df.style.apply(highlight_off)
     final_df = final_df.apply(highlight_absence)
     # set size of the text inside the table
-    final_df = final_df.set_properties(**{'font-size': '9pt'})
-    final_empty_space.table(final_df)#, use_container_width=True)
+    final_df = final_df.set_properties(**{'font-size': '8pt'})
+    # take off the index that contains 'BOH'
+    final_empty_space.table(final_df, use_container_width=True)
 
 if __name__ == '__main__':
     # upload a file
@@ -361,11 +364,17 @@ if __name__ == '__main__':
         # read the file
         df = pd.read_excel(uploaded_file)
         unique_users = df['ID'].unique()
+        
+        # take off all boh users
+        df = df[~df['Shift type'].isin(boh_type)]
 
         # get unique departments    
         unique_departments = df['Department (attribution)'].unique()
         # create a filter for the departments
-        department_filter = st.sidebar.multiselect('Department', dict_map.keys())
+        options = dict_map.keys()
+        # take off BOH
+        options = [x for x in options if x != 'BOH']
+        department_filter = st.sidebar.multiselect('Department', options)
 
         if len(department_filter) > 0:
             # filter the data 
@@ -405,4 +414,5 @@ if __name__ == '__main__':
         ]
         concatenated = concatenated.drop(useless_columns, axis = 1)
         #st.write(concatenated)
+        # filter out boh
         process_data(concatenated)
