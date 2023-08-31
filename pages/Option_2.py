@@ -353,7 +353,7 @@ def process_data(df):
     # set size of the text inside the table
     final_df = final_df.set_properties(**{'font-size': '8pt'})
     # take off the index that contains 'BOH'
-    final_empty_space.table(final_df, use_container_width=True)
+    final_empty_space.table(final_df)#, use_container_width=True)
 
 if __name__ == '__main__':
     # upload a file
